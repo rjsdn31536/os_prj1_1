@@ -284,7 +284,9 @@ run_task (char **argv)
   const char *task = argv[1];
   
   printf ("Executing '%s':\n", task);
+  printf("1111111111111111111111111111111111111111\n");
 #ifdef USERPROG
+  printf("222222111111111111111111111111\n");
   process_wait (process_execute (task));
 #else
   run_test (task);

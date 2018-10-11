@@ -33,7 +33,7 @@ pid_t exec(const char *cmd_line) // SYS_EXEC num = 2 - syscall 1
 
 int wait (pid_t pid) // SYS_WAIT num = 3 - syscall 1
 {
-	return 1;
+	return process_wait(pid);
 }
 
 int read (int fd, void *buffer, unsigned size) // SYS_READ num = 8 - syscall 3
@@ -93,9 +93,9 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f) 
 {
-	printf("1111\n");
-//  printf(" number : %d\n\n",*(int*)(f->esp));
-//  hex_dump(f->esp,f->esp,100,true);
+	printf("\n\n\n\n\n\n\n1111111111111111\n\n\n\n\n");
+    printf(" number : %d\n\n",*(int*)(f->esp));
+    hex_dump(f->esp,f->esp,100,true);
   if(*(int*)f->esp == SYS_HALT) // SYS_HALT
   {
 	  halt();
@@ -106,11 +106,11 @@ syscall_handler (struct intr_frame *f)
   }
   else if(*(int*)f->esp == SYS_EXEC) // SYS_EXEC
   {
-
+	  f->eax = exec(*(char**)(f->esp+4));
   }
   else if(*(int*)f->esp == SYS_WAIT) // SYS_WAIT
   {
-
+	  f->eax = wait(*(pid_t*)(f->esp+4));
   }
   else if(*(int*)f->esp == SYS_READ) // SYS_READ
 	  f->eax = read(*(int*)(f->esp+4),(void*)*(int*)(f->esp+8),(unsigned )*(int*)(f->esp+12));

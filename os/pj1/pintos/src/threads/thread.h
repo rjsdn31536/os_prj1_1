@@ -14,6 +14,10 @@ enum thread_status
     THREAD_DYING        /* About to be destroyed. */
   };
 
+// save all list
+struct list every_list;
+
+
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
 typedef int tid_t;
@@ -89,6 +93,7 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
+	struct list_elem child; 			/* Child list */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
