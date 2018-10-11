@@ -8,7 +8,6 @@
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
 #include "userprog/tss.h"
-#include "userprog/syscall.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
@@ -38,7 +37,6 @@ process_execute (const char *file_name)
   if (fn_copy == NULL)
 	  return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
-  printf("%s\n",file_name);
 
   /* Create a new thread to execute FILE_NAME. */
 
@@ -100,7 +98,9 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid ) 
 {
-	int i, sum=0;
+	int i;
+	int sum=0;
+
 	struct thread *current = thread_current();
 	struct thread *now;
 
@@ -110,21 +110,22 @@ process_wait (tid_t child_tid )
 		sum += i;
 
 
-/*	if(child_tid < 0)
+	if(child_tid < 0)
 		exit(-1);
 
 	printf("cur_tid : %d\n", current->tid);
 	printf("cur_name : %s\n", current->name);
 	printf("tid : %d\n", child_tid);
-	
+
 	for(list_e = list_begin(&every_list) 
 			; list_e != list_end(&every_list)
 			; list_e = list_next(list_e)){
 		now = list_entry(list_e, struct thread, allelem);
 		if(child_tid == now->tid)
 			printf("process 122  name : %s, tid : %d\n", now->name, now->tid);
-	}*/
-	return i;
+	}
+
+	return sum;
 }
 
 /* Free the current process's resources. */
@@ -251,8 +252,6 @@ load (const char *file_name, void (**eip) (void), void **esp)
 	bool success = false;
 	int i,j;
 
-
-	printf("1111111\n\n\n\n");
 
 	// add code
 	int argc=0;
@@ -413,7 +412,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   *esp -= 4;
   **(unsigned**)esp = 0;
 
-  hex_dump((int)*esp,*esp,PHYS_BASE-(*esp),true);
+//  hex_dump((int)*esp,*esp,PHYS_BASE-(*esp),true);
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
 

@@ -94,7 +94,7 @@ thread_init (void)
   list_init (&ready_list);
   list_init (&all_list);
   /// ******
- // list_init (&every_list);
+  list_init (&every_list);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -475,7 +475,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
   list_push_back (&all_list, &t->allelem);
- // list_push_back (&every_list, &t->allelem);
+  list_push_back (&every_list, &t->allelem);
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
