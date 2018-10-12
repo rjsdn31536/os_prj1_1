@@ -23,6 +23,10 @@ void halt (void) // SYS_HALT num = 0 - syscall 0
 
 void exit (int status) // SYS_EXIT num = 1 - syscall 1 
 {
+	struct thread *current = thread_current();
+
+	current->lifeflag = 0;
+
 	printf("%s: exit(%d)\n",thread_name(),status);
 	thread_exit();
 }
@@ -93,9 +97,10 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f) 
 {
-	printf("\n\n\n\n\n\n\n1111111111111111\n\n\n\n\n");
-    printf(" number : %d\n\n",*(int*)(f->esp));
-    hex_dump(f->esp,f->esp,100,true);
+	
+   // printf(" number : %d ",*(int*)(f->esp));
+   // hex_dump(f->esp,f->esp,100,true);
+	
   if(*(int*)f->esp == SYS_HALT) // SYS_HALT
   {
 	  halt();

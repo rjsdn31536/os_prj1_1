@@ -93,7 +93,7 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
-	struct list_elem child; 			/* Child list */
+	int lifeflag; 			/* Child list */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */

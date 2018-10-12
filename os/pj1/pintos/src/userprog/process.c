@@ -17,6 +17,7 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/synch.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -28,8 +29,14 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 tid_t
 process_execute (const char *file_name) 
 {
+
+//	printf("process execute\n");
   char *fn_copy;
   tid_t tid;
+  if(strcpy(file_name,"no-such-file") == 0 )
+  {
+	
+  }
 
   /* Make a copy of FILE_NAME.
 	 Otherwise there's a race between the caller and load(). */
@@ -49,6 +56,7 @@ process_execute (const char *file_name)
   //
 
   tid = thread_create (f_name, PRI_DEFAULT, start_process, fn_copy);
+ // printf("thread_create finish\n");
   if (tid == TID_ERROR)
 	  palloc_free_page (fn_copy); 
   return tid;
@@ -98,40 +106,48 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid ) 
 {
-	int i;
-	int sum=0;
+	//printf("process wait\n");
+	//int i;
+	//int sum=0;
 
 	struct thread *current = thread_current();
 	struct thread *now;
 
 	struct list_elem *list_e;
 
+	/*
 	for(i=0;i<1000000000;i++)
 		sum += i;
+		*/
 
 
 	if(child_tid < 0)
 		exit(-1);
 
-	printf("cur_tid : %d\n", current->tid);
-	printf("cur_name : %s\n", current->name);
-	printf("tid : %d\n", child_tid);
-
+//	printf("cur_tid : %d\n", current->tid);
+//	printf("cur_name : %s\n", current->name);
+//	printf("tid : %d\n", child_tid);
 	for(list_e = list_begin(&every_list) 
 			; list_e != list_end(&every_list)
 			; list_e = list_next(list_e)){
 		now = list_entry(list_e, struct thread, allelem);
 		if(child_tid == now->tid)
-			printf("process 122  name : %s, tid : %d\n", now->name, now->tid);
+		{
+//			printf("name---- : %s, lifeflag ---- : %d\n", now->name, now->lifeflag);
+			while(now->lifeflag== 1){
+				barrier();
+			}
+			break;
+		}
 	}
-
-	return sum;
+	return now->status;
 }
 
 /* Free the current process's resources. */
 void
 process_exit (void)
 {
+//  printf("process exit\n");
   struct thread *cur = thread_current ();
   uint32_t *pd;
 
@@ -148,6 +164,7 @@ process_exit (void)
          directory, or our active page directory will be one
          that's been freed (and cleared). */
       cur->pagedir = NULL;
+	  cur->lifeflag = 0;
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
@@ -245,6 +262,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	bool
 load (const char *file_name, void (**eip) (void), void **esp) 
 {
+	//printf("process load\n");
 	struct thread *t = thread_current ();
 	struct Elf32_Ehdr ehdr;
 	struct file *file = NULL;
@@ -252,7 +270,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 	bool success = false;
 	int i,j;
 
-
+	//printf("\n\n\n\n\n\n %s\n\n\n\n\n",file_name);
 	// add code
 	int argc=0;
 	char *f_name,*ptr,filename[100] = {'\0',};
