@@ -13,8 +13,7 @@
 #include <string.h>
 
 static void syscall_handler (struct intr_frame *);
-//pid_t exec(const char *cmd_line); // SYS_EXEC num = 2 - syscall 1
-//int wait (pid_t pid); // SYS_WAIT num = 3 - syscall 1
+void check_vaddr(const void *vaddr);
 
 void halt (void) // SYS_HALT num = 0 - syscall 0 
 {
@@ -24,9 +23,13 @@ void halt (void) // SYS_HALT num = 0 - syscall 0
 void exit (int status) // SYS_EXIT num = 1 - syscall 1 
 {
 	struct thread *current = thread_current();
-
+	struct list_elem *prev;
+	struct thread *entry_prev;
 	current->lifeflag = 0;
-
+	prev = list_prev(&(current->allelem));
+	entry_prev = list_entry(prev,struct thread,allelem);
+	entry_prev->child_status = status;
+	
 	printf("%s: exit(%d)\n",thread_name(),status);
 	thread_exit();
 }
@@ -98,7 +101,7 @@ static void
 syscall_handler (struct intr_frame *f) 
 {
 	
-   // printf(" number : %d ",*(int*)(f->esp));
+  // printf(" number : %d\n",*(int*)(f->esp));
    // hex_dump(f->esp,f->esp,100,true);
 	
   if(*(int*)f->esp == SYS_HALT) // SYS_HALT
@@ -107,22 +110,45 @@ syscall_handler (struct intr_frame *f)
   }
   else if(*(int*)f->esp == SYS_EXIT) // SYS_EXIT
   {
+	  check_vaddr(f->esp+4);
 	  exit(*(int*)(f->esp+4));
   }
   else if(*(int*)f->esp == SYS_EXEC) // SYS_EXEC
   {
+	  check_vaddr(f->esp+4);
 	  f->eax = exec(*(char**)(f->esp+4));
   }
   else if(*(int*)f->esp == SYS_WAIT) // SYS_WAIT
   {
+	  check_vaddr(f->esp+4);
 	  f->eax = wait(*(pid_t*)(f->esp+4));
   }
-  else if(*(int*)f->esp == SYS_READ) // SYS_READ
+  else if(*(int*)f->esp == SYS_READ){ // SYS_READ
+	  check_vaddr(f->esp+4);
+	  check_vaddr(f->esp+8);
+	  check_vaddr(f->esp+12);
 	  f->eax = read(*(int*)(f->esp+4),(void*)*(int*)(f->esp+8),(unsigned )*(int*)(f->esp+12));
-  else if(*(int*)f->esp == SYS_WRITE) // SYS_WRITE
+  }
+  else if(*(int*)f->esp == SYS_WRITE){ // SYS_WRITE
+	  check_vaddr(f->esp+4);
+	  check_vaddr(f->esp+8);
+	  check_vaddr(f->esp+12);
 	  f->eax = write(*(int*)(f->esp+4),(void*)*(int*)(f->esp+8),(unsigned )*(int*)(f->esp+12));
-  else if( *(int*)f->esp == SYS_PIB)
+  }
+  else if( *(int*)f->esp == SYS_PIB){
+	  check_vaddr(f->esp+4);
 	  f->eax = pib(*(int*)(f->esp+4));
-  else if( *(int*)f->esp == SYS_SOFI)
+  }
+  else if( *(int*)f->esp == SYS_SOFI){
+	  check_vaddr(f->esp+4);
+	  check_vaddr(f->esp+8);
+	  check_vaddr(f->esp+12);
 	  f->eax = sofi(*(int*)(f->esp+4),*(int*)(f->esp+8),*(int*)(f->esp+12),*(int*)(f->esp+16));
+  }
+}
+
+
+void check_vaddr(const void *vaddr){
+	if(!is_user_vaddr(vaddr))
+		exit(-1);
 }

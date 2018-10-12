@@ -33,11 +33,6 @@ process_execute (const char *file_name)
 //	printf("process execute\n");
   char *fn_copy;
   tid_t tid;
-  if(strcpy(file_name,"no-such-file") == 0 )
-  {
-	
-  }
-
   /* Make a copy of FILE_NAME.
 	 Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
@@ -54,9 +49,10 @@ process_execute (const char *file_name)
   f_name = strtok_r(filename," ",&ptr);
   
   //
+  if(strcmp(file_name,"no-such-file") == 0)
+	  return -1;
 
   tid = thread_create (f_name, PRI_DEFAULT, start_process, fn_copy);
- // printf("thread_create finish\n");
   if (tid == TID_ERROR)
 	  palloc_free_page (fn_copy); 
   return tid;
@@ -112,35 +108,28 @@ process_wait (tid_t child_tid )
 
 	struct thread *current = thread_current();
 	struct thread *now;
+	int flag = 0;
 
 	struct list_elem *list_e;
 
-	/*
-	for(i=0;i<1000000000;i++)
-		sum += i;
-		*/
-
-
 	if(child_tid < 0)
 		exit(-1);
-
-//	printf("cur_tid : %d\n", current->tid);
-//	printf("cur_name : %s\n", current->name);
-//	printf("tid : %d\n", child_tid);
 	for(list_e = list_begin(&every_list) 
 			; list_e != list_end(&every_list)
 			; list_e = list_next(list_e)){
 		now = list_entry(list_e, struct thread, allelem);
 		if(child_tid == now->tid)
 		{
-//			printf("name---- : %s, lifeflag ---- : %d\n", now->name, now->lifeflag);
+			flag =1;
 			while(now->lifeflag== 1){
 				barrier();
 			}
 			break;
 		}
 	}
-	return now->status;
+	if(flag == 0)
+		return -1;
+	return current->child_status;
 }
 
 /* Free the current process's resources. */
@@ -150,7 +139,6 @@ process_exit (void)
 //  printf("process exit\n");
   struct thread *cur = thread_current ();
   uint32_t *pd;
-
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -270,7 +258,6 @@ load (const char *file_name, void (**eip) (void), void **esp)
 	bool success = false;
 	int i,j;
 
-	//printf("\n\n\n\n\n\n %s\n\n\n\n\n",file_name);
 	// add code
 	int argc=0;
 	char *f_name,*ptr,filename[100] = {'\0',};
@@ -291,7 +278,6 @@ load (const char *file_name, void (**eip) (void), void **esp)
 	process_activate ();
 
 	/* Open executable file. */
-
 	// add code
 	f_name = strtok_r(filename," ",&ptr);
 	//
