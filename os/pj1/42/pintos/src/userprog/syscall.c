@@ -87,6 +87,8 @@ int read (int fd, void *buffer, unsigned size) // SYS_READ num = 8 - syscall 3
 int write (int fd, const void *buffer, unsigned size) // SYS_WRITE num = 9 - syscall 3
 {
 	struct thread* now = thread_current();
+	int tmp;
+
 	check_vaddr(buffer);
 	if(fd == 1)
 	{
@@ -94,7 +96,9 @@ int write (int fd, const void *buffer, unsigned size) // SYS_WRITE num = 9 - sys
 		return size;
 	}
 	else{
-		return file_write(now->fd[fd], buffer, size);
+		tmp =  file_write(now->fd[fd], buffer, size);
+
+		return tmp;
 	}
 	return -1;
 }
@@ -127,7 +131,7 @@ int open ( const char *file)
 			now->fd[i] = fp;
 			flag = 1;
 		//	if(strcmp(now->name,file) == 0)
-		//		file_deny_write(now->fd[i]);
+//				file_deny_write(now->fd[i]);
 			break;
 		}
 	}

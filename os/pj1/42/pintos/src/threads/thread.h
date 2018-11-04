@@ -103,6 +103,7 @@ struct thread
 
 	//============ project 2 ================
 	struct file* fd[128];
+	struct file* now_file;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */

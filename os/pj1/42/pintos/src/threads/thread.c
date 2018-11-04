@@ -296,6 +296,10 @@ thread_exit (void)
 
 #ifdef USERPROG
   process_exit ();
+  struct thread* now = thread_current();
+
+  if(now->now_file != NULL)
+	  file_allow_write(now->now_file);
 #endif
 
   /* Remove thread from all threads list, set our status to dying,
@@ -484,6 +488,7 @@ init_thread (struct thread *t, const char *name, int priority)
   {
 	  t->fd[i] = NULL;
   }
+  t->now_file = NULL;
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
