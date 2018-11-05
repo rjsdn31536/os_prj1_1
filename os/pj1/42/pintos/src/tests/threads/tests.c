@@ -47,7 +47,6 @@ void
 run_test (const char *name) 
 {
   const struct test *t;
-
   for (t = tests; t < tests + sizeof tests / sizeof *tests; t++)
     if (!strcmp (name, t->name))
       {
@@ -67,7 +66,6 @@ void
 msg (const char *format, ...) 
 {
   va_list args;
-  
   printf ("(%s) ", test_name);
   va_start (args, format);
   vprintf (format, args);

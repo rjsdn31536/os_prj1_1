@@ -46,7 +46,6 @@ process_execute (const char *file_name)
   char *f_name,*ptr,filename[100] = {'\0',};
   strlcpy(filename,file_name,strlen(file_name)+1);
   f_name = strtok_r(filename," ",&ptr);
-  
   //
   if(strcmp(file_name,"no-such-file") == 0)
 	  return -1;
@@ -65,7 +64,6 @@ start_process (void *file_name_)
   char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
-
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
@@ -106,7 +104,6 @@ process_wait (tid_t child_tid )
 	int flag = 0;
 
 	struct list_elem *list_e;
-
 	if(child_tid < 0)
 		exit(-1);
 	for(list_e = list_begin(&every_list) 
@@ -245,7 +242,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 bool
 load (const char *file_name, void (**eip) (void), void **esp) 
 {
-	//printf("process load\n");
+//	printf("process load\n");
 	struct thread *t = thread_current ();
 	struct Elf32_Ehdr ehdr;
 	struct file *file = NULL;

@@ -79,6 +79,8 @@ int read (int fd, void *buffer, unsigned size) // SYS_READ num = 8 - syscall 3
 		return i;
 	}
 	else{
+		if(now->fd[fd] == NULL)
+			exit(-1);
 		return file_read(now->fd[fd], buffer, size);
 	}
 	return -1;
@@ -96,6 +98,8 @@ int write (int fd, const void *buffer, unsigned size) // SYS_WRITE num = 9 - sys
 		return size;
 	}
 	else{
+		if(now->fd[fd] == NULL)
+			exit(-1);
 		tmp =  file_write(now->fd[fd], buffer, size);
 
 		return tmp;
@@ -130,8 +134,6 @@ int open ( const char *file)
 		if(now->fd[i] == NULL){
 			now->fd[i] = fp;
 			flag = 1;
-		//	if(strcmp(now->name,file) == 0)
-//				file_deny_write(now->fd[i]);
 			break;
 		}
 	}
@@ -144,12 +146,16 @@ int open ( const char *file)
 int filesize (int fd)
 {
 	struct thread* now = thread_current();
+	if(now->fd[fd] == NULL)
+		exit(-1);
 	return file_length(now->fd[fd]);
 }
 
 void seek(int fd, unsigned position)
 {
 	struct thread* now = thread_current();
+	if(now->fd[fd] == NULL)
+		exit(-1);
 	
 	file_seek(now->fd[fd], position);
 }
@@ -157,6 +163,8 @@ void seek(int fd, unsigned position)
 unsigned tell(int fd)
 {
 	struct thread* now = thread_current();
+	if(now->fd[fd] == NULL)
+		exit(-1);
 
 	return file_tell(now->fd[fd]);
 }
@@ -184,8 +192,7 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f) 
 {
-  //printf("number : %d\n",*(int*)(f->esp));	
-	
+ // printf("number : %d\n",*(int*)(f->esp));	
   if(*(int*)f->esp == SYS_HALT) // SYS_HALT : 0
   {
 	  halt();
