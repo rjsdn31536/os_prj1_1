@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "synch.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -15,9 +16,11 @@ enum thread_status
   };
 
 // save all list
+struct semaphore every_sema;
+struct semaphore wait_sema;
+//struct list every_list;
+struct lock allock;
 struct list every_list;
-
-
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
 typedef int tid_t;
@@ -98,12 +101,15 @@ struct thread
     struct list_elem elem;              /* List element. */
 	
 	//============= project 1 ==================
-	int lifeflag; 			/* Child list */
+	int lifeflag;
 	int child_status; 		/* Child status */
 
 	//============ project 2 ================
 	struct file* fd[128];
 	struct file* now_file;
+	struct semaphore sema;
+	int status_mine;
+	int wait_check;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */

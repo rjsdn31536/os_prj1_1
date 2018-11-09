@@ -27,15 +27,24 @@ void exit (int status) // SYS_EXIT num = 1 - syscall 1
 	struct list_elem *prev;
 	struct thread *entry_prev;
 	current->lifeflag = 0;
+	current->status_mine = status;
 	prev = list_prev(&(current->allelem));
 	entry_prev = list_entry(prev,struct thread,allelem);
 	entry_prev->child_status = status;
-	printf("%s: exit(%d)\n",thread_name(),status);
+	printf("%s: exit(%d)\n",current->name,status);
+	sema_up(&every_sema);
+	sema_up(&current->sema);
+	sema_down(&wait_sema);
 	thread_exit();
 }
 pid_t exec(const char *cmd_line) // SYS_EXEC num = 2 - syscall 1
 {
-	return process_execute(cmd_line);
+	pid_t a;
+	a = process_execute(cmd_line);
+	if(a == -1)
+		return a;
+	sema_down(&every_sema);
+	return a;
 }
 
 int wait (pid_t pid) // SYS_WAIT num = 3 - syscall 1
@@ -71,19 +80,32 @@ int read (int fd, void *buffer, unsigned size) // SYS_READ num = 8 - syscall 3
 {
 	int i;
 	struct thread* now = thread_current();
+	int tmp;
+
+
 	check_vaddr(buffer);
+
+	lock_acquire(&allock);
 	if(fd == 0)
 	{
 		for(i=0;i<(int)size;i++)
 			*(char*)buffer =  input_getc();
+		lock_release(&allock);
 		return i;
 	}
 	else{
-		if(now->fd[fd] == NULL)
+		if(now->fd[fd] == NULL){
 			exit(-1);
-		return file_read(now->fd[fd], buffer, size);
+		}
+
+		tmp = file_read(now->fd[fd], buffer, size);
+		lock_release(&allock);
+
+		return tmp;
 	}
+		lock_release(&allock);
 	return -1;
+
 }
 
 int write (int fd, const void *buffer, unsigned size) // SYS_WRITE num = 9 - syscall 3
@@ -91,19 +113,24 @@ int write (int fd, const void *buffer, unsigned size) // SYS_WRITE num = 9 - sys
 	struct thread* now = thread_current();
 	int tmp;
 
+	lock_acquire(&allock);
 	check_vaddr(buffer);
 	if(fd == 1)
 	{
 		putbuf(buffer, size);
+		lock_release(&allock);
 		return size;
 	}
 	else{
-		if(now->fd[fd] == NULL)
+		if(now->fd[fd] == NULL){
 			exit(-1);
+		}
 		tmp =  file_write(now->fd[fd], buffer, size);
+		lock_release(&allock);
 
 		return tmp;
 	}
+		lock_release(&allock);
 	return -1;
 }
 
@@ -121,14 +148,18 @@ bool remove ( const char *file)
 
 int open ( const char *file)
 {
-	if(file == NULL)
-		exit(-1);
-	struct file* fp = filesys_open(file);
 	struct thread* now = thread_current();
+	lock_acquire(&allock);
+	if(file == NULL){
+		exit(-1);
+	}
+	struct file* fp = filesys_open(file);
 	int i;
 	int flag = 0;
-	if(fp == NULL)
+	if(fp == NULL){
+		lock_release(&allock);
 		return -1;
+	}
 
 	for(i=2; i<128; i++){
 		if(now->fd[i] == NULL){
@@ -138,9 +169,15 @@ int open ( const char *file)
 		}
 	}
 	if(flag == 1)
+	{
+		lock_release(&allock);
 		return i;
+	}
 	else
+	{
+		lock_release(&allock);
 		return -1;
+	}
 }
 
 int filesize (int fd)
@@ -184,6 +221,7 @@ void close(int fd)
 void
 syscall_init (void) 
 {
+	lock_init(&allock);
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
@@ -192,7 +230,8 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f) 
 {
- // printf("number : %d\n",*(int*)(f->esp));	
+//	if(*(int*)f->esp != 8)
+//		printf("number : %d\n",*(int*)(f->esp));	
   if(*(int*)f->esp == SYS_HALT) // SYS_HALT : 0
   {
 	  halt();

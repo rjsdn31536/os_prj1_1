@@ -95,7 +95,6 @@ thread_init (void)
   list_init (&all_list);
   /// ******
   list_init (&every_list);
-
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
@@ -186,7 +185,6 @@ thread_create (const char *name, int priority,
   /* Initialize thread. */
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
-
   /* Prepare thread for first run by initializing its stack.
      Do this atomically so intermediate values for the 'stack' 
      member cannot be observed. */
@@ -268,7 +266,6 @@ struct thread *
 thread_current (void) 
 {
   struct thread *t = running_thread ();
-  
   /* Make sure T is really a thread.
      If either of these assertions fire, then your thread may
      have overflowed its stack.  Each thread has less than 4 kB
@@ -297,7 +294,6 @@ thread_exit (void)
 #ifdef USERPROG
   process_exit ();
   struct thread* now = thread_current();
-
   if(now->now_file != NULL)
 	  file_allow_write(now->now_file);
 #endif
@@ -307,7 +303,7 @@ thread_exit (void)
      when it calls thread_schedule_tail(). */
   intr_disable ();
   list_remove (&thread_current()->allelem);
-  thread_current ()->status = THREAD_DYING;
+  thread_current()->status = THREAD_DYING;
   schedule ();
   NOT_REACHED ();
 }
@@ -470,7 +466,6 @@ init_thread (struct thread *t, const char *name, int priority)
   ASSERT (t != NULL);
   ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
   ASSERT (name != NULL);
-
   memset (t, 0, sizeof *t);
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
@@ -478,6 +473,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
   t->lifeflag = 1;
+  t->wait_check = 0;
   //============ project 1 ===============
   list_push_back (&all_list, &t->allelem);
   list_push_back (&every_list, &t->allelem);
@@ -489,6 +485,10 @@ init_thread (struct thread *t, const char *name, int priority)
 	  t->fd[i] = NULL;
   }
   t->now_file = NULL;
+  sema_init(&(t->sema),0);
+  sema_init(&every_sema,0);
+  sema_init(&wait_sema,0);
+  
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and

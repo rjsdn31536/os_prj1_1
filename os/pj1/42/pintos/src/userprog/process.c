@@ -29,7 +29,6 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 tid_t
 process_execute (const char *file_name) 
 {
-
   char *fn_copy;
   tid_t tid;
   /* Make a copy of FILE_NAME.
@@ -42,15 +41,14 @@ process_execute (const char *file_name)
   /* Create a new thread to execute FILE_NAME. */
 
   // add code
-
   char *f_name,*ptr,filename[100] = {'\0',};
   strlcpy(filename,file_name,strlen(file_name)+1);
   f_name = strtok_r(filename," ",&ptr);
   //
   if(strcmp(file_name,"no-such-file") == 0)
 	  return -1;
-
   tid = thread_create (f_name, PRI_DEFAULT, start_process, fn_copy);
+  
   if (tid == TID_ERROR)
 	  palloc_free_page (fn_copy); 
   return tid;
@@ -64,11 +62,13 @@ start_process (void *file_name_)
   char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
+
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
+
   success = load (file_name, &if_.eip, &if_.esp);
 
   /* If load failed, quit. */
@@ -102,7 +102,7 @@ process_wait (tid_t child_tid )
 	struct thread *current = thread_current();
 	struct thread *now;
 	int flag = 0;
-
+	int status = 0;
 	struct list_elem *list_e;
 	if(child_tid < 0)
 		exit(-1);
@@ -112,23 +112,29 @@ process_wait (tid_t child_tid )
 		now = list_entry(list_e, struct thread, allelem);
 		if(child_tid == now->tid)
 		{
+			now->wait_check++;
+			if(now->wait_check > 1)
+				status = -1;
+			else
+				status = now->status_mine;
 			flag =1;
-			while(now->lifeflag== 1){
-				barrier();
+			if(now->lifeflag == 1)
+			{
+				sema_up(&wait_sema);
+				sema_down(&now->sema);
 			}
 			break;
 		}
 	}
 	if(flag == 0)
 		return -1;
-	return current->child_status;
+	return status;
 }
 
 /* Free the current process's resources. */
 void
 process_exit (void)
 {
-//  printf("process exit\n");
   struct thread *cur = thread_current ();
   uint32_t *pd;
   /* Destroy the current process's page directory and switch back
@@ -144,7 +150,7 @@ process_exit (void)
          directory, or our active page directory will be one
          that's been freed (and cleared). */
       cur->pagedir = NULL;
-	  cur->lifeflag = 0;
+	  cur->lifeflag =0;
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
@@ -242,14 +248,12 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 bool
 load (const char *file_name, void (**eip) (void), void **esp) 
 {
-//	printf("process load\n");
 	struct thread *t = thread_current ();
 	struct Elf32_Ehdr ehdr;
 	struct file *file = NULL;
 	off_t file_ofset;
 	bool success = false;
 	int i,j;
-
 	// add code
 	int argc=0;
 	char *f_name,*ptr,filename[100] = {'\0',};
@@ -261,7 +265,6 @@ load (const char *file_name, void (**eip) (void), void **esp)
 	strlcpy(filename,file_name,strlen(file_name)+1);
 
     //
-
 	/* Allocate and activate page directory. */
 	t->pagedir = pagedir_create ();
 	if (t->pagedir == NULL) 
@@ -272,15 +275,12 @@ load (const char *file_name, void (**eip) (void), void **esp)
 	// add code
 	f_name = strtok_r(filename," ",&ptr);
 	//
-
-
 	file = filesys_open (f_name);
 	if (file == NULL) 
     {
       printf ("load: %s: open failed\n", f_name);
       goto done; 
     }
-
   /* Read and verify executable header. */
   if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
       || memcmp (ehdr.e_ident, "\177ELF\1\1\1", 7)
@@ -418,8 +418,9 @@ done:
 	  thread_current()->now_file = file;
 	  file_deny_write(file);
   }
-  else
+  else{
 	  file_close (file);
+  }
 
   return success;
 }
