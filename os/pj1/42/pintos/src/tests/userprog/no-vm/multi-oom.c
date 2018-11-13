@@ -146,10 +146,14 @@ main (int argc, char *argv[])
 
       /* If maximum depth is reached, return result. */
       if (child_pid == -1)
+	  {
+    // msg ("1i:%d, n:%d. program forked %d times. child_pid = %d",i, n,howmany, child_pid);
         return n;
+}
 
       /* Else wait for child to report how deeply it was able to recurse. */
       int reached_depth = wait (child_pid);
+	  
       if (reached_depth == -1)
         fail ("wait returned -1.");
 
@@ -162,9 +166,15 @@ main (int argc, char *argv[])
         fail ("after run %d/%d, expected depth %d, actual depth %d.",
               i, howmany, expected_depth, reached_depth);
       ASSERT (expected_depth == reached_depth);
+  //   msg ("2i:%d, n:%d. program forked %d times. child_pid = %d",i, n,howmany, child_pid);
+//	 msg("howmany : %d", howmany);
+	
     }
 
+//     msg ("n:%d. program forked %d times.", n,howmany);
+//     msg ("expected_depth : %d", expected_depth);
   consume_some_resources ();
+
 
   if (n == 0)
     {

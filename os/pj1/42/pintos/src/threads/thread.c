@@ -93,8 +93,6 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
-  /// ******
-  list_init (&every_list);
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
@@ -209,6 +207,7 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
+  list_push_back(&thread_current()->c_list,&t->c_elem);
 
 
   return tid;
@@ -292,10 +291,13 @@ thread_exit (void)
   ASSERT (!intr_context ());
 
 #ifdef USERPROG
+  struct thread* current = thread_current();
   process_exit ();
-  struct thread* now = thread_current();
-  if(now->now_file != NULL)
-	  file_allow_write(now->now_file);
+  if(current->now_file != NULL)
+	  file_allow_write(current->now_file);
+  sema_up(&current->sema);
+  sema_down(&current->wait_sema);
+//  printf("thread.c) pid : %d, pname : %s\n", now->tid, now->name);
 #endif
 
   /* Remove thread from all threads list, set our status to dying,
@@ -473,10 +475,11 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
   t->lifeflag = 1;
-  t->wait_check = 0;
   //============ project 1 ===============
+  list_init(&t->c_list);
   list_push_back (&all_list, &t->allelem);
-  list_push_back (&every_list, &t->allelem);
+  list_push_back (&t->c_list, &t->c_elem);
+
 
   //=========== project 2 ==================
   int i;
@@ -485,10 +488,14 @@ init_thread (struct thread *t, const char *name, int priority)
 	  t->fd[i] = NULL;
   }
   t->now_file = NULL;
+  t->status_mine = 0;
+  ////////////////
+  t->child_life = 0;
+  t->parent_tid = 0;
+
   sema_init(&(t->sema),0);
-  sema_init(&every_sema,0);
-  sema_init(&wait_sema,0);
-  
+  sema_init(&(t->syn_sema),0);
+  sema_init(&t->wait_sema,0);
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and

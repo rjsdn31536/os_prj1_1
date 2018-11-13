@@ -48,10 +48,28 @@ process_execute (const char *file_name)
   if(strcmp(file_name,"no-such-file") == 0)
 	  return -1;
   tid = thread_create (f_name, PRI_DEFAULT, start_process, fn_copy);
-  
+
   if (tid == TID_ERROR)
-	  palloc_free_page (fn_copy); 
-  return tid;
+	  palloc_free_page (fn_copy);
+//////////*
+  
+	struct thread *now;
+	struct list_elem *list_e;
+	for(list_e = list_begin(&thread_current()->c_list) 
+			; list_e != list_end(&thread_current()->c_list)
+			; list_e = list_next(list_e)){
+		now = list_entry(list_e, struct thread, c_elem);
+		if(tid == now->tid)
+		{
+			now->parent_tid = thread_current()->tid;
+			break;
+		}
+	}
+
+	if(thread_current()->child_life == 1){
+		return process_wait(tid);
+	}
+	return tid;
 }
 
 /* A thread function that loads a user process and starts it
@@ -68,11 +86,11 @@ start_process (void *file_name_)
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-
   success = load (file_name, &if_.eip, &if_.esp);
 
-  /* If load failed, quit. */
+/* If load failed, quit. */
   palloc_free_page (file_name);
+
   if (!success) 
     thread_exit ();
 
@@ -96,39 +114,36 @@ start_process (void *file_name_)
 
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
-int
+	int
 process_wait (tid_t child_tid ) 
 {
 	struct thread *current = thread_current();
 	struct thread *now;
-	int flag = 0;
-	int status = 0;
 	struct list_elem *list_e;
-	if(child_tid < 0)
+	int status;
+	if(child_tid <= 0 || child_tid >= PHYS_BASE)
 		exit(-1);
-	for(list_e = list_begin(&every_list) 
-			; list_e != list_end(&every_list)
+
+	for(list_e = list_begin(&current->c_list) 
+			; list_e != list_end(&current->c_list)
 			; list_e = list_next(list_e)){
-		now = list_entry(list_e, struct thread, allelem);
+		now = list_entry(list_e, struct thread, c_elem);
 		if(child_tid == now->tid)
 		{
-			now->wait_check++;
-			if(now->wait_check > 1)
-				status = -1;
-			else
-				status = now->status_mine;
-			flag =1;
-			if(now->lifeflag == 1)
-			{
-				sema_up(&wait_sema);
-				sema_down(&now->sema);
-			}
-			break;
+	////////////////////////////////
+			current->child_life = 1;
+			sema_down(&now->sema);
+			current->child_life = 0;
+			status = now->status_mine;
+			list_remove(&now->c_elem);
+			sema_up(&now->wait_sema);
+			return status;
 		}
+		if(now->tid == 0)
+			return -1;
 	}
-	if(flag == 0)
-		return -1;
-	return status;
+
+	return -1;
 }
 
 /* Free the current process's resources. */
@@ -140,6 +155,28 @@ process_exit (void)
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
+  //////////////
+  
+	struct thread *now;
+	struct list_elem *list_e;
+	for(list_e = list_begin(&cur->c_list) 
+			; 
+			; list_e = list_prev(list_e)){
+		now = list_entry(list_e, struct thread, c_elem);
+		// cur 없어질놈
+		if(cur->parent_tid == now->tid)
+		{
+//			printf("1234\n");
+			//
+			//now->child_life=0;
+			//process_wait(now->tid);
+			break;
+		}
+	}
+//	cur->child_life=0;
+	
+	
+	
   if (pd != NULL) 
     {
       /* Correct ordering here is crucial.  We must set
@@ -253,7 +290,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 	struct file *file = NULL;
 	off_t file_ofset;
 	bool success = false;
-	int i,j;
+	int i;
 	// add code
 	int argc=0;
 	char *f_name,*ptr,filename[100] = {'\0',};
@@ -263,7 +300,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 		argv[i] = (char*)malloc(sizeof(char)*100);
 	int argv_address[100] = {0,};
 	strlcpy(filename,file_name,strlen(file_name)+1);
-
+	
     //
 	/* Allocate and activate page directory. */
 	t->pagedir = pagedir_create ();
@@ -419,9 +456,11 @@ done:
 	  file_deny_write(file);
   }
   else{
+	  list_remove(&t->elem);
 	  file_close (file);
   }
-
+//  printf("process.c) pid : %d, pname : %s\n", thread_current()->tid, thread_current()->name);
+  sema_up(&t->syn_sema);
   return success;
 }
 

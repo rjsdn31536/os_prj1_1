@@ -16,11 +16,6 @@ enum thread_status
   };
 
 // save all list
-struct semaphore every_sema;
-struct semaphore wait_sema;
-//struct list every_list;
-struct lock allock;
-struct list every_list;
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
 typedef int tid_t;
@@ -108,9 +103,13 @@ struct thread
 	struct file* fd[128];
 	struct file* now_file;
 	struct semaphore sema;
+	struct list c_list;
+	struct list_elem c_elem;
 	int status_mine;
-	int wait_check;
-
+	struct semaphore syn_sema;
+	struct semaphore wait_sema;
+	int child_life; /* 1:arrive, 0:dead */
+	int parent_tid;
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
