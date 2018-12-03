@@ -108,6 +108,7 @@ main (int argc, char *argv[])
   int n;
 
   n = argc > 1 ? atoi (argv[1]) : 0;
+//  msg("n = %d\n",n);
   bool is_at_root = (n == 0);
   if (is_at_root)
     msg ("begin");
@@ -125,7 +126,6 @@ main (int argc, char *argv[])
   for (i = 0; i < howmany; i++)
     {
       pid_t child_pid;
-
       /* Spawn a child that will be abnormally terminated.
          To speed the test up, do this only for processes
          spawned at a certain depth. */
@@ -147,9 +147,8 @@ main (int argc, char *argv[])
       /* If maximum depth is reached, return result. */
       if (child_pid == -1)
 	  {
-    // msg ("1i:%d, n:%d. program forked %d times. child_pid = %d",i, n,howmany, child_pid);
         return n;
-}
+	  }
 
       /* Else wait for child to report how deeply it was able to recurse. */
       int reached_depth = wait (child_pid);
@@ -166,8 +165,6 @@ main (int argc, char *argv[])
         fail ("after run %d/%d, expected depth %d, actual depth %d.",
               i, howmany, expected_depth, reached_depth);
       ASSERT (expected_depth == reached_depth);
-  //   msg ("2i:%d, n:%d. program forked %d times. child_pid = %d",i, n,howmany, child_pid);
-//	 msg("howmany : %d", howmany);
 	
     }
 

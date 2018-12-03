@@ -40,7 +40,6 @@
 
 /* Page directory with kernel mappings only. */
 uint32_t *init_page_dir;
-
 #ifdef FILESYS
 /* -f: Format the file system? */
 static bool format_filesys;
@@ -98,7 +97,6 @@ main (void)
   palloc_init (user_page_limit);
   malloc_init ();
   paging_init ();
-
   /* Segmentation. */
 #ifdef USERPROG
   tss_init ();
@@ -256,6 +254,11 @@ parse_options (char **argv)
         random_init (atoi (value));
       else if (!strcmp (name, "-mlfqs"))
         thread_mlfqs = true;
+#ifndef USERPROG
+	  /* project 3*/
+	  else if(!strcmp(name,"-aging"))
+		  thread_prior_aging = true;
+#endif
 #ifdef USERPROG
       else if (!strcmp (name, "-ul"))
         user_page_limit = atoi (value);

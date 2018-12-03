@@ -4,7 +4,13 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
-#include "synch.h"
+#include "threads/synch.h"
+
+#ifndef USERPROG
+/* project 3*/
+extern bool thread_prior_aging;
+#endif
+static struct thread *idle_thread;
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -108,8 +114,10 @@ struct thread
 	int status_mine;
 	struct semaphore syn_sema;
 	struct semaphore wait_sema;
-	int child_life; /* 1:arrive, 0:dead */
-	int parent_tid;
+	//=========== project 3 =================
+	int wakeup;
+	int recent_cpu;
+	int nice;
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -123,6 +131,10 @@ struct thread
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
+
+void thread_aging();
+void calculating_recent_cpu(struct thread *t,void *aux);
+void calculating_priority(struct thread *t,void *aux);
 
 void thread_init (void);
 void thread_start (void);
@@ -154,5 +166,6 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+bool compare(const struct list_elem *a,const struct list_elem *b,void *aux);
 
 #endif /* threads/thread.h */

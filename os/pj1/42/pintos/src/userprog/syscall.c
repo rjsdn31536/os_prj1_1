@@ -15,6 +15,7 @@
 
 static void syscall_handler (struct intr_frame *);
 void check_vaddr(const void *vaddr);
+struct lock filesys_lock;
 
 void halt (void) // SYS_HALT num = 0 - syscall 0 
 {
@@ -32,6 +33,7 @@ void exit (int status) // SYS_EXIT num = 1 - syscall 1
 	prev = list_prev(&(current->allelem));
 	entry_prev = list_entry(prev,struct thread,allelem);
 	entry_prev->child_status = status;
+
 	printf("%s: exit(%d)\n",thread_name(),status);
 	for (i = 2; i < 128; i++) {
 		if (thread_current()->fd[i] != NULL) {
@@ -56,10 +58,10 @@ pid_t exec(const char *cmd_line) // SYS_EXEC num = 2 - syscall 1
 			sema_down(&now->syn_sema);
 			break;
 		}
-		if(now->tid == 0)
+		if(now->tid == 0){
 			return -1;
+		}
 	}
-
 	return a;
 }
 
@@ -102,23 +104,25 @@ int read (int fd, void *buffer, unsigned size) // SYS_READ num = 8 - syscall 3
 
 	check_vaddr(buffer);
 
+	lock_acquire(&filesys_lock);
 	if(fd == 0)
 	{
 		for(i=0;i<(int)size;i++)
 			*(char*)buffer =  input_getc();
+		lock_release(&filesys_lock);
 		return i;
 	}
 	else{
 		if(now->fd[fd] == NULL){
+		lock_release(&filesys_lock);
 			exit(-1);
 		}
 
 		tmp = file_read(now->fd[fd], buffer, size);
+		lock_release(&filesys_lock);
 
 		return tmp;
 	}
-	return -1;
-
 }
 
 int write (int fd, const void *buffer, unsigned size) // SYS_WRITE num = 9 - syscall 3
@@ -127,20 +131,23 @@ int write (int fd, const void *buffer, unsigned size) // SYS_WRITE num = 9 - sys
 	int tmp;
 
 	check_vaddr(buffer);
+	lock_acquire(&filesys_lock);
 	if(fd == 1)
 	{
 		putbuf(buffer, size);
+		lock_release(&filesys_lock);
 		return size;
 	}
 	else{
 		if(now->fd[fd] == NULL){
+		lock_release(&filesys_lock);
 			exit(-1);
 		}
 		tmp =  file_write(now->fd[fd], buffer, size);
+		lock_release(&filesys_lock);
 
 		return tmp;
 	}
-	return -1;
 }
 
 bool create ( const char *file, unsigned initial_size)
@@ -152,6 +159,8 @@ bool create ( const char *file, unsigned initial_size)
 
 bool remove ( const char *file)
 {
+	if(file == NULL)
+		exit(-1);
 	return filesys_remove(file);
 }
 
@@ -161,27 +170,23 @@ int open ( const char *file)
 	if(file == NULL){
 		exit(-1);
 	}
+	lock_acquire(&filesys_lock);
 	struct file* fp = filesys_open(file);
 	int i;
-	int flag = 0;
 	if(fp == NULL){
+		lock_release(&filesys_lock);
 		return -1;
 	}
 	for(i=2; i<128; i++){
 		if(now->fd[i] == NULL){
 			now->fd[i] = fp;
-			flag = 1;
-			break;
+		lock_release(&filesys_lock);
+			return i;
 		}
 	}
-	if(flag == 1)
-	{
-		return i;
-	}
-	else
-	{
-		return -1;
-	}
+	printf("111\n");
+		lock_release(&filesys_lock);
+	return -1;
 }
 
 int filesize (int fd)
@@ -225,6 +230,7 @@ void close(int fd)
 void
 syscall_init (void) 
 {
+	lock_init(&filesys_lock);
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
@@ -233,7 +239,7 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f) 
 {
-/*	if(*(int*)f->esp != 8)
+/*	if(*(int*)f->esp == 1)
 	{
 		printf("\nnumber : %d\n",*(int*)(f->esp));	
 		printf("%s %d\n\n",thread_current()->name,thread_current()->tid);

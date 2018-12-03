@@ -19,6 +19,7 @@
 #include "threads/vaddr.h"
 #include "threads/synch.h"
 
+int load_flag;
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
@@ -34,8 +35,9 @@ process_execute (const char *file_name)
   /* Make a copy of FILE_NAME.
 	 Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
-  if (fn_copy == NULL)
+  if (fn_copy == NULL){
 	  return TID_ERROR;
+  }
   strlcpy (fn_copy, file_name, PGSIZE);
 
   /* Create a new thread to execute FILE_NAME. */
@@ -44,32 +46,16 @@ process_execute (const char *file_name)
   char *f_name,*ptr,filename[100] = {'\0',};
   strlcpy(filename,file_name,strlen(file_name)+1);
   f_name = strtok_r(filename," ",&ptr);
-  //
-  if(strcmp(file_name,"no-such-file") == 0)
+  if(strcmp(file_name,"no-such-file") == 0){
 	  return -1;
+  }
   tid = thread_create (f_name, PRI_DEFAULT, start_process, fn_copy);
 
   if (tid == TID_ERROR)
+  {
 	  palloc_free_page (fn_copy);
-//////////*
-  
-	struct thread *now;
-	struct list_elem *list_e;
-	for(list_e = list_begin(&thread_current()->c_list) 
-			; list_e != list_end(&thread_current()->c_list)
-			; list_e = list_next(list_e)){
-		now = list_entry(list_e, struct thread, c_elem);
-		if(tid == now->tid)
-		{
-			now->parent_tid = thread_current()->tid;
-			break;
-		}
-	}
-
-	if(thread_current()->child_life == 1){
-		return process_wait(tid);
-	}
-	return tid;
+  }
+  return tid;
 }
 
 /* A thread function that loads a user process and starts it
@@ -91,9 +77,9 @@ start_process (void *file_name_)
 /* If load failed, quit. */
   palloc_free_page (file_name);
 
-  if (!success) 
-    thread_exit ();
-
+  if (!success){ 
+	  exit(-1);
+  }
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
 	char *f_name,*ptr,filename[100] = {'\0',};
@@ -113,39 +99,43 @@ start_process (void *file_name_)
    immediately, without waiting.
 
    This function will be implemented in problem 2-2.  For now, it
-   does nothing. */
-	int
+  does nothing. */
+int
 process_wait (tid_t child_tid ) 
 {
 	struct thread *current = thread_current();
 	struct thread *now;
 	struct list_elem *list_e;
 	int status;
-	if(child_tid <= 0 || child_tid >= PHYS_BASE)
+	int status1;
+	int status2;
+	int status3;
+	if(child_tid < 0){
 		exit(-1);
-
+	}
+	if(current == NULL || child_tid == TID_ERROR){
+		return -1;
+	}
 	for(list_e = list_begin(&current->c_list) 
 			; list_e != list_end(&current->c_list)
 			; list_e = list_next(list_e)){
 		now = list_entry(list_e, struct thread, c_elem);
 		if(child_tid == now->tid)
 		{
-	////////////////////////////////
-			current->child_life = 1;
 			sema_down(&now->sema);
-			current->child_life = 0;
 			status = now->status_mine;
-			list_remove(&now->c_elem);
+			list_remove(&(now->c_elem));
 			sema_up(&now->wait_sema);
+
 			return status;
 		}
-		if(now->tid == 0)
+		if(now->tid == 0){
 			return -1;
+		}
 	}
 
 	return -1;
 }
-
 /* Free the current process's resources. */
 void
 process_exit (void)
@@ -155,27 +145,8 @@ process_exit (void)
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
-  //////////////
   
-	struct thread *now;
-	struct list_elem *list_e;
-	for(list_e = list_begin(&cur->c_list) 
-			; 
-			; list_e = list_prev(list_e)){
-		now = list_entry(list_e, struct thread, c_elem);
-		// cur 없어질놈
-		if(cur->parent_tid == now->tid)
-		{
-//			printf("1234\n");
-			//
-			//now->child_life=0;
-			//process_wait(now->tid);
-			break;
-		}
-	}
 //	cur->child_life=0;
-	
-	
 	
   if (pd != NULL) 
     {
@@ -293,12 +264,16 @@ load (const char *file_name, void (**eip) (void), void **esp)
 	int i;
 	// add code
 	int argc=0;
-	char *f_name,*ptr,filename[100] = {'\0',};
+	char *f_name,*ptr;
+	char *filename = (char *)malloc(sizeof(char)*300);
 	char **argv;
 	argv = (char**)malloc(sizeof(char*)*100);
 	for(i=0;i<100;i++)
 		argv[i] = (char*)malloc(sizeof(char)*100);
-	int argv_address[100] = {0,};
+	
+
+	
+	int argv_address[128] = {0,};
 	strlcpy(filename,file_name,strlen(file_name)+1);
 	
     //
@@ -450,16 +425,20 @@ load (const char *file_name, void (**eip) (void), void **esp)
   success = true;
   	
 done:
+  for(i=0; i<100; i++){
+	  free(argv[i]);
+  }
+  free(argv);
+  free(filename);
+
   /* We arrive here whether the load is successful or not. */
   if(success){
 	  thread_current()->now_file = file;
 	  file_deny_write(file);
   }
   else{
-	  list_remove(&t->elem);
 	  file_close (file);
   }
-//  printf("process.c) pid : %d, pname : %s\n", thread_current()->tid, thread_current()->name);
   sema_up(&t->syn_sema);
   return success;
 }

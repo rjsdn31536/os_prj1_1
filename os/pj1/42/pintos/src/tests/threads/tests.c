@@ -18,6 +18,7 @@ static const struct test tests[] =
     {"alarm-zero", test_alarm_zero},
     {"alarm-negative", test_alarm_negative},
     {"priority-change", test_priority_change},
+    {"priority-change-2", test_priority_change_2},
     {"priority-donate-one", test_priority_donate_one},
     {"priority-donate-multiple", test_priority_donate_multiple},
     {"priority-donate-multiple2", test_priority_donate_multiple2},
@@ -26,8 +27,10 @@ static const struct test tests[] =
     {"priority-donate-lower", test_priority_donate_lower},
     {"priority-donate-chain", test_priority_donate_chain},
     {"priority-fifo", test_priority_fifo},
+    {"priority-lifo", test_priority_lifo},
     {"priority-preempt", test_priority_preempt},
     {"priority-sema", test_priority_sema},
+    {"priority-aging", test_priority_aging},
     {"priority-condvar", test_priority_condvar},
     {"mlfqs-load-1", test_mlfqs_load_1},
     {"mlfqs-load-60", test_mlfqs_load_60},
@@ -47,6 +50,7 @@ void
 run_test (const char *name) 
 {
   const struct test *t;
+
   for (t = tests; t < tests + sizeof tests / sizeof *tests; t++)
     if (!strcmp (name, t->name))
       {
@@ -66,6 +70,7 @@ void
 msg (const char *format, ...) 
 {
   va_list args;
+  
   printf ("(%s) ", test_name);
   va_start (args, format);
   vprintf (format, args);
